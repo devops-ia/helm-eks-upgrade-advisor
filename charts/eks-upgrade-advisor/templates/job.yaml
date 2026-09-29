@@ -81,6 +81,17 @@ spec:
           volumeMounts:
             - name: output
               mountPath: /output
+            # $HOME in the image (see eks-upgrade-advisor's Dockerfile) — the
+            # Copilot CLI persists session state here. Required for
+            # securityContext.readOnlyRootFilesystem: true to work.
+            - name: home
+              mountPath: /home/advisor
+            # Node/npm and the Copilot CLI can write scratch files to /tmp
+            # (os.tmpdir()) independently of $HOME — with
+            # readOnlyRootFilesystem: true the image's own /tmp is read-only,
+            # so this has to be a real writable mount too.
+            - name: tmp
+              mountPath: /tmp
             {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -90,6 +101,10 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
       volumes:
         - name: output
+          emptyDir: {}
+        - name: home
+          emptyDir: {}
+        - name: tmp
           emptyDir: {}
         {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
