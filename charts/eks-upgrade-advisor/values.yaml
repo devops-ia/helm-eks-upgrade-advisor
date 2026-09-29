@@ -46,7 +46,11 @@ secrets:
 podAnnotations: {}
 podLabels: {}
 annotations: {}
-podSecurityContext: {}
+podSecurityContext:
+  # Owns the "home" emptyDir volume mounted at $HOME (see securityContext.
+  # readOnlyRootFilesystem below) so the non-root container UID can write to
+  # it — matches the image's advisor user (UID/GID 1000).
+  fsGroup: 1000
 
 serviceAccount:
   create: true
@@ -71,7 +75,10 @@ securityContext:
   runAsNonRoot: true
   runAsUser: 1000
   allowPrivilegeEscalation: false
-  readOnlyRootFilesystem: false   # the report is written to /output inside the container
+  # The report goes to the "output" emptyDir (/output) and the Copilot CLI's
+  # session state goes to the "home" emptyDir ($HOME) — both writable
+  # volumes, not the root filesystem, so this can stay true.
+  readOnlyRootFilesystem: true
   capabilities:
     drop:
       - ALL
