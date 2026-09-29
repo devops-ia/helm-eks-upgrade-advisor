@@ -1,0 +1,108 @@
+{{- $ghSecretName := include "eks-upgrade-advisor.copilotSecretName" . }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "eks-upgrade-advisor.fullname" . }}
+  labels:
+    {{- include "eks-upgrade-advisor.labels" . | nindent 4 }}
+  {{- with .Values.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ttlSecondsAfterFinished: {{ .Values.job.ttlSecondsAfterFinished }}
+  backoffLimit: {{ .Values.job.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.job.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "eks-upgrade-advisor.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "eks-upgrade-advisor.serviceAccountName" . }}
+      restartPolicy: Never
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # Override the image's ENTRYPOINT to cat the report to stdout once the
+          # run finishes — this way `kubectl logs job/<name>` returns the full
+          # Markdown report with no need to `kubectl cp` out of a dead pod.
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              eks-upgrade-advisor
+              echo "----- REPORT (also saved at ${OUTPUT_PATH}) -----"
+              cat "${OUTPUT_PATH}"
+          env:
+            - name: CLUSTER_NAME
+              value: {{ required "config.clusterName is required" .Values.config.clusterName | quote }}
+            - name: TARGET_EKS_VERSION
+              value: {{ required "config.targetEksVersion is required" .Values.config.targetEksVersion | quote }}
+            - name: AWS_REGION
+              value: {{ .Values.config.awsRegion | quote }}
+            {{- if .Values.config.argocdNamespace }}
+            - name: ARGOCD_NAMESPACE
+              value: {{ .Values.config.argocdNamespace | quote }}
+            {{- end }}
+            - name: LLM_PROVIDER
+              value: {{ .Values.config.llmProvider | quote }}
+            - name: COPILOT_MODEL
+              value: {{ .Values.config.copilotModel | quote }}
+            - name: OUTPUT_PATH
+              value: {{ .Values.config.outputPath | quote }}
+            {{- if eq .Values.config.llmProvider "copilot-cli" }}
+            - name: GH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $ghSecretName }}
+                  key: {{ .Values.secrets.copilotCli.existingSecretKey }}
+            {{- end }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.envFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: output
+              mountPath: /output
+            {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+      volumes:
+        - name: output
+          emptyDir: {}
+        {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

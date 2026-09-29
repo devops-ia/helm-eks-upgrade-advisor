@@ -1,0 +1,93 @@
+# Pre-built Docker image (no initContainers)
+image:
+  repository: ghcr.io/devops-ia/eks-upgrade-advisor
+  tag: ""                        # default: Chart.appVersion
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# This chart deploys a Job, not a Deployment — the tool runs once, writes a
+# report and exits. Trigger it with `helm install`/`helm upgrade --install`
+# (or `kubectl create job --from=job/<name>` to re-run without touching the
+# release) whenever you need a fresh report; there is no polling loop.
+job:
+  # How long Kubernetes keeps the completed/failed Job object (and its Pod,
+  # so `kubectl logs` still works) around before garbage-collecting it.
+  ttlSecondsAfterFinished: 86400   # 24h — long enough to `kubectl logs` the report after the run
+  backoffLimit: 0                  # do not auto-retry; a partial report is not safe to trust
+  activeDeadlineSeconds: 1800      # 30m hard timeout
+
+config:
+  # EKS cluster to inspect. Required.
+  clusterName: ""
+  # EKS/Kubernetes version to upgrade to, e.g. "1.32". Required.
+  targetEksVersion: ""
+  awsRegion: eu-west-1
+  # Restrict ArgoCD Application discovery to one namespace. Empty = all namespaces.
+  argocdNamespace: ""
+  # LLM provider used to summarize official changelogs. Currently only "copilot-cli".
+  llmProvider: copilot-cli
+  copilotModel: claude-sonnet-4.5
+  outputPath: /output/report.md
+
+# Credentials for the GitHub Copilot CLI (a token with a Copilot license
+# assigned, used non-interactively — see the eks-upgrade-advisor README).
+# Option A (production): reference an existing Secret.
+# Option B (dev/test only): provide the token inline — the chart creates the Secret.
+secrets:
+  copilotCli:
+    existingSecret: ""     # name of an existing Secret holding the token
+    existingSecretKey: "gh-token"
+    token: ""              # inline token — dev/test only
+
+# Kubernetes standard fields
+podAnnotations: {}
+podLabels: {}
+annotations: {}
+podSecurityContext: {}
+
+serviceAccount:
+  create: true
+  name: ""              # defaults to the fullname when create=true; use "default" when create=false
+  # IRSA role ARN — must grant only eks:DescribeCluster, eks:ListAddons,
+  # eks:DescribeAddon, eks:DescribeAddonVersions. Read-only, nothing else.
+  annotations: {}
+  # e.g.
+  # annotations:
+  #   eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/eks-upgrade-advisor-ro
+
+# Read-only RBAC granting get/list on applications.argoproj.io and namespaces.
+# This is the tool's core discovery mechanism, not an opt-in feature — always
+# created alongside the ServiceAccount.
+rbac:
+  create: true
+  # Restrict the ClusterRole to a Role scoped to a single namespace instead.
+  # Leave false (default) to discover ArgoCD Applications cluster-wide.
+  namespaced: false
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false   # the report is written to /output inside the container
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  limits:
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+volumes: []
+volumeMounts: []
+env: []
+envFrom: []
+nodeSelector: {}
+tolerations: []
+affinity: {}
+extraObjects: []

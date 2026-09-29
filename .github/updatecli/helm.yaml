@@ -1,0 +1,43 @@
+sources:
+  eks-upgrade-advisor:
+    kind: githubrelease
+    spec:
+      owner: devops-ia
+      repository: eks-upgrade-advisor
+      versionfilter:
+        kind: semver
+
+scms:
+  github:
+    kind: github
+    spec:
+      user: '{{ requiredEnv "UPDATECLI_GITHUB_ACTOR" }}'
+      email: "github-actions[bot]@users.noreply.github.com"
+      owner: devops-ia
+      repository: helm-eks-upgrade-advisor
+      token: '{{ requiredEnv "UPDATECLI_GITHUB_TOKEN" }}'
+      username: '{{ requiredEnv "UPDATECLI_GITHUB_ACTOR" }}'
+      branch: main
+
+conditions: {}
+
+targets:
+  bump-appversion:
+    name: bump eks-upgrade-advisor helm chart appVersion
+    kind: helmchart
+    scmid: github
+    spec:
+      name: charts/eks-upgrade-advisor
+      file: Chart.yaml
+      key: $.appVersion
+      versionincrement: patch
+    sourceid: eks-upgrade-advisor
+
+actions:
+  pr:
+    kind: github/pullrequest
+    scmid: github
+    title: 'chore(dep): update eks-upgrade-advisor to {{ source "eks-upgrade-advisor" }}'
+    spec:
+      labels:
+        - auto-pr-bump-version

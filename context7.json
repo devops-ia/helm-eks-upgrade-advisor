@@ -1,0 +1,19 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "helm-eks-upgrade-advisor",
+  "description": "Helm chart for eks-upgrade-advisor — a one-shot Job that auto-discovers EKS addons and ArgoCD-managed Helm charts and generates an EKS upgrade compatibility report.",
+  "url": "https://context7.com/devops-ia/helm-eks-upgrade-advisor",
+  "folders": ["charts"],
+  "excludeFolders": [".github"],
+  "excludeFiles": ["CHANGELOG.md"],
+  "rules": [
+    "This chart deploys a batch/v1 Job, not a Deployment — the tool runs once and exits",
+    "config.clusterName and config.targetEksVersion are required; helm install fails fast without them",
+    "The report is retrieved via `kubectl logs job/<name>` — job.yaml overrides the ENTRYPOINT to cat the report to stdout after the run, no PVC or kubectl cp needed",
+    "RBAC (get/list on applications.argoproj.io) is always created when rbac.create and serviceAccount.create are both true — it is the tool's core discovery mechanism, not an opt-in feature",
+    "rbac.namespaced=true switches from a cluster-wide ClusterRole to a namespaced Role — pair it with config.argocdNamespace",
+    "AWS access is via IRSA only (serviceAccount.annotations['eks.amazonaws.com/role-arn']) — there is no chart field for inline AWS credentials",
+    "secrets.copilotCli.existingSecret is for production; secrets.copilotCli.token is inline, dev/test only",
+    "job.ttlSecondsAfterFinished controls how long the completed Job (and its logs) stay retrievable before Kubernetes garbage-collects it"
+  ]
+}

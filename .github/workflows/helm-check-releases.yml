@@ -1,0 +1,29 @@
+name: Helm Check Releases
+
+permissions:
+  contents: write
+  pull-requests: write
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *' # every day
+
+jobs:
+  check-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install updatecli
+        uses: updatecli/updatecli-action@ca8c01bf875e2520512c344a71dd02f3dc3326a7 # v3.7.0
+
+      - name: Update dependencies
+        env:
+          UPDATECLI_GITHUB_TOKEN: ${{ secrets.PAT_GITHUB }}
+          UPDATECLI_GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          updatecli apply --config .github/updatecli/helm.yaml

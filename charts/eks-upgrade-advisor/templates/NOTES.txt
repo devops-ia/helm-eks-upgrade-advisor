@@ -1,0 +1,33 @@
+eks-upgrade-advisor {{ .Chart.AppVersion }} has been deployed as a one-shot Job.
+
+┌─ Run ──────────────────────────────────────────────────────────────────────┐
+│  The Job starts immediately. Follow it and read the report with:
+│
+│  kubectl wait --for=condition=complete job/{{ include "eks-upgrade-advisor.fullname" . }} \
+│    -n {{ .Release.Namespace }} --timeout={{ .Values.job.activeDeadlineSeconds }}s
+│
+│  kubectl logs job/{{ include "eks-upgrade-advisor.fullname" . }} -n {{ .Release.Namespace }}
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌─ Configuration ──────────────────────────────────────────────────────────┐
+│  Cluster           : {{ .Values.config.clusterName }}
+│  Target EKS version: {{ .Values.config.targetEksVersion }}
+│  AWS region         : {{ .Values.config.awsRegion }}
+│  ArgoCD namespace   : {{ .Values.config.argocdNamespace | default "(all)" }}
+│  LLM provider       : {{ .Values.config.llmProvider }}
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌─ Re-run ─────────────────────────────────────────────────────────────────┐
+│  A Job's pod spec is immutable — to run again, either bump the release
+│  (helm upgrade --install with a new/changed value) or delete and reinstall:
+│
+│  helm uninstall {{ .Release.Name }} -n {{ .Release.Namespace }}
+│  helm install {{ .Release.Name }} devops-ia/eks-upgrade-advisor -n {{ .Release.Namespace }} [--set ...]
+└──────────────────────────────────────────────────────────────────────────┘
+
+{{- if and (eq .Values.config.llmProvider "copilot-cli") (not .Values.secrets.copilotCli.existingSecret) (not .Values.secrets.copilotCli.token) }}
+
+WARNING: llmProvider is "copilot-cli" but no token was configured
+(secrets.copilotCli.existingSecret / secrets.copilotCli.token). The
+changelog-summary section of the report will fail.
+{{- end }}

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "eks-upgrade-advisor Helm chart values",
+  "type": "object",
+  "properties": {
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string" },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+      },
+      "required": ["repository"]
+    },
+    "job": {
+      "type": "object",
+      "properties": {
+        "ttlSecondsAfterFinished": { "type": "integer", "minimum": 0 },
+        "backoffLimit": { "type": "integer", "minimum": 0 },
+        "activeDeadlineSeconds": { "type": "integer", "minimum": 60 }
+      }
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "clusterName": { "type": "string", "minLength": 1 },
+        "targetEksVersion": { "type": "string", "minLength": 1 },
+        "awsRegion": { "type": "string", "minLength": 1 },
+        "argocdNamespace": { "type": "string" },
+        "llmProvider": { "type": "string", "enum": ["copilot-cli"] },
+        "copilotModel": { "type": "string", "minLength": 1 },
+        "outputPath": { "type": "string", "minLength": 1 }
+      },
+      "required": ["clusterName", "targetEksVersion"]
+    },
+    "secrets": {
+      "type": "object",
+      "properties": {
+        "copilotCli": {
+          "type": "object",
+          "properties": {
+            "existingSecret": { "type": "string" },
+            "existingSecretKey": { "type": "string" },
+            "token": { "type": "string" }
+          }
+        }
+      }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "name": { "type": "string" },
+        "annotations": { "type": "object" }
+      }
+    },
+    "rbac": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "namespaced": { "type": "boolean" }
+      }
+    }
+  }
+}

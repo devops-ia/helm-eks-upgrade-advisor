@@ -1,0 +1,21 @@
+apiVersion: v2
+name: eks-upgrade-advisor
+version: 0.1.0
+appVersion: v0.1.0
+description: Helm chart for eks-upgrade-advisor — generates EKS upgrade compatibility reports by auto-discovering cluster addons and ArgoCD-managed Helm charts
+type: application
+home: https://github.com/devops-ia/helm-eks-upgrade-advisor
+sources:
+  - https://github.com/devops-ia/eks-upgrade-advisor
+  - https://github.com/devops-ia/helm-eks-upgrade-advisor
+keywords:
+  - eks
+  - kubernetes
+  - upgrade
+  - argocd
+  - devops
+maintainers:
+  - name: ialejandro
+    email: hello@ialejandro.rocks
+  - name: amartingarcia
+    email: adrianmg231189@gmail.com
